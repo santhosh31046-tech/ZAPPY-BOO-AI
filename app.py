@@ -251,7 +251,7 @@ st.markdown(
     <div class="hero">
         <div class="eyebrow">Your personal learning dashboard</div>
         <h1>Study smarter.<br>Feel more prepared.</h1>
-        <p>Build a daily study plan, track your preparation, and get practical next steps — all in one place.</p>
+        <p>Choose a subject and get a general timetable by default, or optionally enter topics for a day-by-day topic-wise plan.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -274,40 +274,43 @@ with st.form("study_form", border=True):
     with right:
         days = st.number_input("Days until exam", min_value=1, max_value=180, value=7)
         hours = st.slider("Study hours available per day", 1, 12, 3)
-        subjects = st.text_input(
-            "Subjects (separate with commas)",
-            "Operating Systems, Mathematics, Python",
+        subject = st.selectbox(
+            "Choose a subject",
+            ["Operating Systems", "Python Programming", "Mathematics", "Computer Networks", "Database Management Systems", "Other / Custom Subject"],
         )
+        custom_subject = ""
+        if subject == "Other / Custom Subject":
+            custom_subject = st.text_input("Enter your subject name", placeholder="e.g. Data Structures")
+
+        plan_mode = st.radio(
+            "Choose your plan type",
+            ["General timetable", "Topic-wise plan (optional)"],
+            horizontal=True,
+            help="General timetable is the default. Choose topic-wise only when you want to enter topics manually.",
+        )
+        topics_text = ""
+        if plan_mode == "Topic-wise plan (optional)":
+            topics_text = st.text_area(
+                "Enter topics (one topic per line)",
+                value="",
+                height=150,
+                placeholder="Example:\nProcess Management\nCPU Scheduling\nDeadlocks",
+                help="Optional: enter your own syllabus topics, one per line. Leave blank to use the general timetable instead.",
+            )
 
     submitted = st.form_submit_button("✨ Generate my study plan", use_container_width=True)
 
-# ---------- Keep the generated plan available after button clicks ----------
-if submitted:
-    st.session_state["plan_inputs"] = {
-        "name": name,
-        "marks": marks,
-        "syllabus": syllabus,
-        "practice": practice,
-        "days": int(days),
-        "hours": hours,
-        "subjects": subjects,
-    }
-
 # ---------- Results ----------
-if "plan_inputs" in st.session_state:
-    saved = st.session_state["plan_inputs"]
-    name = saved["name"]
-    marks = saved["marks"]
-    syllabus = saved["syllabus"]
-    practice = saved["practice"]
-    days = saved["days"]
-    hours = saved["hours"]
-    subjects = saved["subjects"]
+if submitted:
     student = name.strip() or "Student"
-    subject_list = list(dict.fromkeys(s.strip() for s in subjects.split(",") if s.strip()))
-    if not subject_list:
-        st.error("Please enter at least one subject, separated by commas.")
+    selected_subject = custom_subject.strip() if subject == "Other / Custom Subject" else subject
+    if not selected_subject:
+        st.error("Please enter a subject name.")
         st.stop()
+    topic_list = [topic.strip() for topic in topics_text.splitlines() if topic.strip()]
+    # If the user chooses topic-wise mode but leaves the topic list empty,
+    # fall back to the regular general timetable as requested.
+    use_topic_plan = plan_mode == "Topic-wise plan (optional)" and bool(topic_list)
 
     st.markdown("---")
     st.markdown('<div class="section-kicker">02 / Your dashboard</div>', unsafe_allow_html=True)
@@ -377,95 +380,76 @@ if "plan_inputs" in st.session_state:
     st.bar_chart(chart_data, y="Percentage", color="#8e7cff")
 
     st.markdown("---")
-    st.markdown('<div class="section-kicker">05 / Advanced feature</div>', unsafe_allow_html=True)
-    st.header("🎯 Subject-wise smart time allocation")
-    st.write("Rate your confidence in each subject. Lower confidence subjects automatically receive more study time.")
-    confidence = {}
-    conf_cols = st.columns(min(3, len(subject_list)))
-    for i, subject in enumerate(subject_list):
-        with conf_cols[i % len(conf_cols)]:
-            confidence[subject] = st.slider(
-                f"{subject} confidence (%)", 0, 100, 50, key=f"confidence_{subject}"
-            )
-
-    st.markdown("---")
-    st.markdown('<div class="section-kicker">06 / Your daily plan</div>', unsafe_allow_html=True)
-    st.header("📚 Smart study timetable")
+    st.markdown('<div class="section-kicker">05 / Your study timetable</div>', unsafe_allow_html=True)
     total_minutes = int(hours * 60)
-    # Lower confidence = higher weight, while every subject gets at least some time.
-    weights = {subject: max(10, 110 - confidence[subject]) for subject in subject_list}
-    weight_total = sum(weights.values())
-    exact = {subject: total_minutes * weights[subject] / weight_total for subject in subject_list}
-    allocations = {subject: int(exact[subject]) for subject in subject_list}
-    leftover = total_minutes - sum(allocations.values())
-    for subject in sorted(subject_list, key=lambda x: exact[x] - allocations[x], reverse=True)[:leftover]:
-        allocations[subject] += 1
 
-    timetable = []
-    for subject in subject_list:
-        level = confidence[subject]
-        focus = "Learn basics + guided examples" if level < 35 else "Revise weak topics + practise" if level < 70 else "Timed questions + quick revision"
-        timetable.append({
-            "Subject": subject,
-            "Confidence": f"{level}%",
-            "Daily study time": f"{allocations[subject]} min",
-            "Suggested focus": focus,
-        })
+    if use_topic_plan:
+        st.header(f"{selected_subject}: topic-wise study plan")
+        days_for_plan = min(int(days), len(topic_list))
+        # Spread topics across the days before the exam; multiple topics may share a day.
+        topic_groups = [[] for _ in range(days_for_plan)]
+        for i, topic in enumerate(topic_list):
+            topic_groups[i % days_for_plan].append(topic)
 
-    st.markdown(
-        f'<div class="tip">📅 You have <b>{total_minutes} minutes</b> each day. The timetable gives extra time to subjects where your confidence is lower.</div>',
-        unsafe_allow_html=True,
-    )
-    timetable_df = pd.DataFrame(timetable)
-    st.dataframe(timetable_df, use_container_width=True, hide_index=True)
-    st.download_button(
-        "⬇️ Download timetable as CSV",
-        data=timetable_df.to_csv(index=False).encode("utf-8"),
-        file_name="study_buddy_timetable.csv",
-        mime="text/csv",
-        use_container_width=True,
-    )
+        timetable = []
+        for day_index, day_topics in enumerate(topic_groups, start=1):
+            per_topic = max(10, total_minutes // max(1, len(day_topics)))
+            for topic in day_topics:
+                timetable.append({
+                    "Study day": f"Day {day_index}",
+                    "Subject": selected_subject,
+                    "Topic to study": topic,
+                    "Suggested time": f"{per_topic} min",
+                    "Task": "Understand concepts + make short notes + solve questions",
+                })
 
-    st.markdown("---")
-    st.markdown('<div class="section-kicker">07 / Daily task tracker</div>', unsafe_allow_html=True)
-    st.header("✅ Today’s study checklist")
-    st.caption("Tick each task when you finish it. Your selections stay while this app session is open.")
-    tasks = [
-        "Study the first topic in my timetable",
-        "Solve at least 5 practice questions",
-        "Review mistakes or difficult concepts",
-        "Take a short break and recap what I learned",
-    ]
-    task_done = []
-    for i, task in enumerate(tasks):
-        task_done.append(st.checkbox(task, key=f"task_{i}"))
-    completed = sum(task_done)
-    st.progress(completed / len(tasks))
-    st.write(f"**Daily progress: {completed}/{len(tasks)} tasks completed**")
-    if completed == len(tasks):
-        st.success("Excellent work! You completed today’s checklist. 🎉")
-
-    st.markdown("---")
-    st.markdown('<div class="section-kicker">08 / Quick self-test</div>', unsafe_allow_html=True)
-    st.header("🧠 Revision self-check")
-    st.write("After studying, answer this quick reflection to check your understanding.")
-    understanding = st.radio(
-        "How well can you explain today’s topic without looking at your notes?",
-        ["Not yet", "A little", "Mostly", "Confidently"],
-        horizontal=True,
-        key="understanding_check",
-    )
-    if understanding == "Not yet":
-        st.info("Re-read the basics, then explain the idea in your own words.")
-    elif understanding == "A little":
-        st.info("Try one worked example and solve a similar question yourself.")
-    elif understanding == "Mostly":
-        st.info("Practise a few questions without notes to strengthen recall.")
+        st.markdown(
+            f'<div class="tip">📅 Subject: <b>{selected_subject}</b> · Topics: <b>{len(topic_list)}</b> · '
+            f'Daily study time: <b>{total_minutes} minutes</b>. This is a suggested schedule; edit the topic list to match your syllabus.</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(pd.DataFrame(timetable), use_container_width=True, hide_index=True)
+        csv_data = pd.DataFrame(timetable).to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download topic-wise plan (CSV)",
+            data=csv_data,
+            file_name="study_buddy_topic_plan.csv",
+            mime="text/csv",
+        )
     else:
-        st.success("Great! Try a timed question or teach the concept to someone else.")
+        st.header("General daily study timetable")
+        st.caption("No topics needed — your subjects are split into balanced study sessions.")
+        subject_names = [x.strip() for x in subjects.split(",") if x.strip()] if "subjects" in locals() else []
+        # Use the selected subject as the general timetable's subject list by default.
+        if not subject_names:
+            subject_names = [selected_subject]
+        base = total_minutes // len(subject_names)
+        remainder = total_minutes % len(subject_names)
+        general_rows = []
+        for i, subject_name in enumerate(subject_names):
+            allocated = base + (1 if i < remainder else 0)
+            general_rows.append({
+                "Study day": "Every day",
+                "Subject": subject_name,
+                "Daily study time": f"{allocated} min",
+                "Suggested task": "Review class notes, study key concepts, practise questions, and recap",
+            })
+        st.markdown(
+            f'<div class="tip">📅 Subject: <b>{selected_subject}</b> · Daily study time: '
+            f'<b>{total_minutes} minutes</b>. Switch to Topic-wise plan only when you want to enter specific topics.</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(pd.DataFrame(general_rows), use_container_width=True, hide_index=True)
+        general_csv = pd.DataFrame(general_rows).to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "⬇️ Download general timetable (CSV)",
+            data=general_csv,
+            file_name="study_buddy_general_timetable.csv",
+            mime="text/csv",
+        )
 
     st.markdown("---")
-    st.markdown('<div class="section-kicker">09 / Next actions</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-kicker">06 / Next actions</div>', unsafe_allow_html=True)
     st.header("Study recommendations")
     recommendations = []
     if syllabus < 50:
@@ -497,16 +481,11 @@ else:
         <div class="soft-card">
             <div class="section-kicker">Your plan starts here</div>
             <h3 style="margin-top:6px;">A little progress every day adds up.</h3>
-            <p>Complete the form above and select <b>Generate my study plan</b> to see your dashboard, readiness estimate, timetable, and recommendations.</p>
+            <p>Complete the form and choose a subject. The general timetable works by default; select topic-wise mode only if you want to enter topics manually.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-if "plan_inputs" in st.session_state:
-    if st.button("🔄 Reset and enter new details", use_container_width=True):
-        st.session_state.pop("plan_inputs", None)
-        st.rerun()
 
 st.markdown(
     '<div class="footer">Study Buddy · AI Smart Study Planner · Prototype for educational use</div>',
