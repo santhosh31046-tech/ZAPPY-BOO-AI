@@ -488,6 +488,6 @@ else:
     )
 
 st.markdown(
-    '<div class="footer">Study Buddy · AI Smart Study Planner · Prototype for educational use</div>',
+    '<div class="footer">ZAPPYBOO💡 · AI Smart Study Planner · Prototype for educational use</div>',
     unsafe_allow_html=True,
 )
