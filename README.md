@@ -1,1 +1,1 @@
-# study-buddy-ai
+# zappy-boo-ai
