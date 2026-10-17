@@ -319,6 +319,87 @@ with st.form("study_form", border=True):
             )
 
     submitted = st.form_submit_button("✨ Generate my study plan", use_container_width=True)
+    # ---------- Smart Study Calendar ----------
+st.markdown("---")
+st.markdown("## 📅 ZAPPYBOO Smart Study Calendar")
+st.write("Plan your subjects and daily study sessions.")
+
+from datetime import date, timedelta
+
+today = date.today()
+
+calendar_days = st.number_input(
+    "How many days do you want to plan?",
+    min_value=1,
+    max_value=30,
+    value=7,
+    key="calendar_days"
+)
+
+calendar_subjects = st.text_input(
+    "Enter subjects (comma-separated)",
+    "Operating Systems, Mathematics, Python",
+    key="calendar_subjects"
+)
+
+if st.button("✨ Create Study Calendar", key="create_calendar"):
+    subject_list_calendar = [
+        s.strip()
+        for s in calendar_subjects.split(",")
+        if s.strip()
+    ]
+
+    if not subject_list_calendar:
+        st.warning("Bro, at least one subject enter pannu!")
+    else:
+        calendar_rows = []
+
+        for day_num in range(int(calendar_days)):
+            study_date = today + timedelta(days=day_num)
+            subject = subject_list_calendar[
+                day_num % len(subject_list_calendar)
+            ]
+
+            calendar_rows.append({
+                "Date": study_date.strftime("%d-%m-%Y"),
+                "Day": study_date.strftime("%A"),
+                "Subject": subject,
+                "Task": "Study + Practice Questions",
+                "Completed": False
+            })
+
+        st.session_state["study_calendar"] = pd.DataFrame(
+            calendar_rows
+        )
+
+if "study_calendar" in st.session_state:
+    edited_calendar = st.data_editor(
+        st.session_state["study_calendar"],
+        use_container_width=True,
+        hide_index=True,
+        disabled=["Date", "Day", "Subject", "Task"],
+        key="calendar_editor"
+    )
+
+    st.session_state["study_calendar"] = edited_calendar
+
+    completed_days = int(
+        edited_calendar["Completed"].sum()
+    )
+    total_days = len(edited_calendar)
+
+    st.progress(completed_days / total_days)
+    st.write(
+        f"📈 Calendar progress: {completed_days}/{total_days} days completed"
+    )
+
+    st.download_button(
+        "⬇️ Download Study Calendar",
+        data=edited_calendar.to_csv(index=False).encode("utf-8"),
+        file_name="zappyboo_study_calendar.csv",
+        mime="text/csv",
+        key="download_calendar"
+    )
 
 # ---------- Results ----------
 if submitted:
