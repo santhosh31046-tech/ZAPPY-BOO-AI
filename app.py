@@ -12,6 +12,16 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    [data-testid="stToolbar"] {
+        visibility: hidden;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown(
+    """
+    <style>
     #GithubIcon {
         display: none !important;
     }
