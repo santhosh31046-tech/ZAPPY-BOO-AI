@@ -226,7 +226,7 @@ model = train_model()
 
 # ---------- Sidebar ----------
 with st.sidebar:
-    st.markdown("## ⚡ZAPPYBOO")
+    st.markdown("## ⚡ZAPPYBOO💡")
     st.caption("AI-powered study companion")
     st.markdown("---")
     st.markdown("### ✨ How it works")
