@@ -10,6 +10,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+st.image("zappyboo_logo.png", width=180)
 st.markdown(
     """
     <style>
