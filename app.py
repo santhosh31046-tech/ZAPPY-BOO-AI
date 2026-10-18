@@ -402,7 +402,6 @@ if "study_calendar" in st.session_state:
         key="download_calendar"
     )
     st.markdown("---")
-render_multi_subject_calendar()
     # ---------- ZAPPYBOO Exam Countdown Timetable ----------
 from datetime import datetime, date, time, timedelta
 
@@ -824,8 +823,7 @@ st.markdown(
     '<div class="footer">ZAPPYBOO💡 · AI Smart Study Planner · Prototype for educational use</div>',
     unsafe_allow_html=True,
 )
-
-def render_multi_subject_calender():
+def render_multi_subject_calendar():
     import streamlit as st
     import pandas as pd
     from datetime import datetime, date, time, timedelta
@@ -1030,3 +1028,4 @@ def render_multi_subject_calender():
                     "No sessions could be scheduled. "
                     "Please adjust your study settings."
                 )
+                render_multi_subject_calendar()
