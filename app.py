@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from datetime import datetime, date, time, timedelta
 
 st.set_page_config(
     page_title="ZAPPYBOO | AI Study Planner",
@@ -400,6 +401,8 @@ if "study_calendar" in st.session_state:
         mime="text/csv",
         key="download_calendar"
     )
+    st.markdown("---")
+render_multi_subject_calendar()
     # ---------- ZAPPYBOO Exam Countdown Timetable ----------
 from datetime import datetime, date, time, timedelta
 
@@ -821,3 +824,209 @@ st.markdown(
     '<div class="footer">ZAPPYBOO💡 · AI Smart Study Planner · Prototype for educational use</div>',
     unsafe_allow_html=True,
 )
+
+def render_multi_subject_calender():
+    import streamlit as st
+    import pandas as pd
+    from datetime import datetime, date, time, timedelta
+
+    st.subheader("⚡ Smart Study Calendar")
+    st.write(
+        "Plan Operating Systems, Python Programming, "
+        "and Mathematics in one combined timetable."
+    )
+
+    subjects = [
+        "Operating Systems",
+        "Python Programming",
+        "Mathematics",
+    ]
+
+    with st.form("multi_subject_calendar_form"):
+        plans = []
+
+        for i, subject in enumerate(subjects):
+            st.markdown(f"### 📘 {subject}")
+
+            topics_text = st.text_area(
+                f"Enter {subject} topics (one topic per line)",
+                key=f"calendar_topics_{i}",
+                placeholder="Topic 1\nTopic 2\nTopic 3",
+            )
+
+            exam_date = st.date_input(
+                f"{subject} exam date",
+                value=date.today() + timedelta(days=1),
+                min_value=date.today(),
+                key=f"calendar_date_{i}",
+            )
+
+            exam_time = st.time_input(
+                f"{subject} exam time",
+                value=time(9, 0),
+                key=f"calendar_time_{i}",
+            )
+
+            hours_per_day = st.number_input(
+                f"Available study hours per day for {subject}",
+                min_value=1,
+                max_value=12,
+                value=2,
+                key=f"calendar_hours_{i}",
+            )
+
+            plans.append({
+                "subject": subject,
+                "topics": topics_text,
+                "exam_date": exam_date,
+                "exam_time": exam_time,
+                "hours": int(hours_per_day),
+            })
+
+        study_start = st.time_input(
+            "Daily study start time",
+            value=time(17, 0),
+            key="calendar_start_time",
+        )
+
+        session_minutes = st.selectbox(
+            "Study duration per topic",
+            [25, 30, 45, 60],
+            index=2,
+            key="calendar_session_minutes",
+        )
+
+        break_minutes = st.selectbox(
+            "Break after each study session",
+            [5, 10, 15],
+            index=1,
+            key="calendar_break_minutes",
+        )
+
+        submitted = st.form_submit_button(
+            "✨ Generate Combined Timetable",
+            use_container_width=True,
+        )
+
+    if submitted:
+        now = datetime.now()
+        errors = []
+        pending = []
+
+        for plan in plans:
+            topic_list = [
+                topic.strip()
+                for topic in plan["topics"].splitlines()
+                if topic.strip()
+            ]
+
+            exam_dt = datetime.combine(
+                plan["exam_date"], plan["exam_time"]
+            )
+
+            if not topic_list:
+                errors.append(
+                    f"{plan['subject']}: Enter at least one topic."
+                )
+
+            if exam_dt <= now:
+                errors.append(
+                    f"{plan['subject']}: Choose a future exam date and time."
+                )
+
+            plan["topic_list"] = topic_list
+            plan["exam_dt"] = exam_dt
+
+            for topic in topic_list:
+                pending.append({
+                    "subject": plan["subject"],
+                    "topic": topic,
+                    "exam_dt": exam_dt,
+                    "hours": plan["hours"],
+                })
+
+        if errors:
+            for error in errors:
+                st.error(error)
+        else:
+            pending.sort(key=lambda item: item["exam_dt"])
+            sessions = []
+            cursor = datetime.combine(now.date(), study_start)
+
+            if cursor < now:
+                cursor = now + timedelta(minutes=5)
+
+            for item in pending:
+                candidate = cursor
+                slot_found = False
+
+                while candidate < item["exam_dt"]:
+                    day_start = datetime.combine(
+                        candidate.date(), study_start
+                    )
+                    day_end = day_start + timedelta(
+                        hours=item["hours"]
+                    )
+
+                    if candidate < day_start:
+                        candidate = day_start
+
+                    session_end = candidate + timedelta(
+                        minutes=session_minutes
+                    )
+
+                    if (
+                        candidate >= day_start
+                        and session_end <= day_end
+                        and session_end < item["exam_dt"]
+                    ):
+                        sessions.append({
+                            "_sort": candidate,
+                            "Date": candidate.strftime("%d-%m-%Y"),
+                            "Start": candidate.strftime("%I:%M %p"),
+                            "End": session_end.strftime("%I:%M %p"),
+                            "Subject": item["subject"],
+                            "Topic": item["topic"],
+                            "Break (minutes)": break_minutes,
+                        })
+
+                        cursor = session_end + timedelta(
+                            minutes=break_minutes
+                        )
+                        slot_found = True
+                        break
+
+                    candidate = day_start + timedelta(days=1)
+                    cursor = candidate
+
+                if not slot_found:
+                    st.warning(
+                        f"Could not schedule: {item['subject']} — "
+                        f"{item['topic']}. Try more study hours or an "
+                        "earlier start time."
+                    )
+
+            if sessions:
+                result = pd.DataFrame(sessions)
+                result = result.sort_values("_sort").drop(
+                    columns=["_sort"]
+                )
+
+                st.success("Your combined timetable is ready!")
+                st.dataframe(
+                    result,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                st.download_button(
+                    "⬇️ Download Combined Timetable (CSV)",
+                    data=result.to_csv(index=False).encode("utf-8"),
+                    file_name="zappyboo_combined_timetable.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.error(
+                    "No sessions could be scheduled. "
+                    "Please adjust your study settings."
+                )
