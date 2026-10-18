@@ -400,6 +400,235 @@ if "study_calendar" in st.session_state:
         mime="text/csv",
         key="download_calendar"
     )
+    # ---------- ZAPPYBOO Exam Countdown Timetable ----------
+from datetime import datetime, date, time, timedelta
+
+st.markdown("---")
+st.markdown("## ⚡ ZAPPYBOO Exam Countdown Planner")
+st.write(
+    "Enter your exam details to create a revision schedule "
+    "with focused study sessions and breaks."
+)
+
+with st.container(border=True):
+    exam_subject = st.text_input(
+        "📘 Exam subject",
+        placeholder="e.g. Operating Systems",
+        key="countdown_subject",
+    )
+
+    exam_topics_text = st.text_area(
+        "📝 Topics to revise (one topic per line)",
+        placeholder="Process Management\nCPU Scheduling\nDeadlocks",
+        key="countdown_topics",
+    )
+
+    exam_date = st.date_input(
+        "📅 Exam date",
+        value=date.today() + timedelta(days=1),
+        min_value=date.today(),
+        key="countdown_date",
+    )
+
+    exam_time = st.time_input(
+        "⏰ Exam start time",
+        value=time(9, 0),
+        key="countdown_time",
+    )
+
+    available_hours = st.number_input(
+        "⌛ Study hours available per day",
+        min_value=1,
+        max_value=16,
+        value=6,
+        key="countdown_hours",
+    )
+
+    start_time = st.time_input(
+        "🌅 Daily study start time",
+        value=time(9, 0),
+        key="countdown_start_time",
+    )
+
+    if st.button(
+        "🚀 Generate Countdown Timetable",
+        use_container_width=True,
+        key="generate_countdown",
+    ):
+        topics = [
+            topic.strip()
+            for topic in exam_topics_text.splitlines()
+            if topic.strip()
+        ]
+
+        now = datetime.now()
+        exam_datetime = datetime.combine(exam_date, exam_time)
+        study_start = datetime.combine(date.today(), start_time)
+
+        if not exam_subject.strip():
+            st.warning("Bro, exam subject enter pannu.")
+        elif not topics:
+            st.warning("Bro, at least one topic enter pannu.")
+        elif exam_datetime <= now:
+            st.warning("Exam date and time future-la irukkanum bro.")
+        elif exam_date == date.today() and study_start <= now:
+            st.warning(
+                "Innaikku study start time past-la irukku. "
+                "Future time select pannu bro."
+            )
+        else:
+            st.session_state["countdown_plan_data"] = {
+                "subject": exam_subject.strip(),
+                "topics": topics,
+                "exam_datetime": exam_datetime,
+                "available_hours": int(available_hours),
+                "start_time": start_time,
+            }
+
+if "countdown_plan_data" in st.session_state:
+    plan = st.session_state["countdown_plan_data"]
+    now = datetime.now()
+    exam_datetime = plan["exam_datetime"]
+    remaining = exam_datetime - now
+
+    if remaining.total_seconds() > 0:
+        total_hours_left = remaining.total_seconds() / 3600
+
+        st.success(
+            f"⏳ Exam in approximately {total_hours_left:.1f} hours"
+        )
+
+        st.caption(
+            f"Subject: {plan['subject']} · "
+            f"Exam: {exam_datetime.strftime('%d-%m-%Y %I:%M %p')}"
+        )
+
+        # Make a schedule for each available day.
+        schedule_rows = []
+        topics = plan["topics"]
+        hours_per_day = plan["available_hours"]
+        current_day = date.today()
+        final_study_day = exam_datetime.date()
+
+        while current_day <= final_study_day:
+            day_start = datetime.combine(
+                current_day, plan["start_time"]
+            )
+            day_end = datetime.combine(
+                current_day, time(21, 0)
+            )
+
+            if current_day == date.today():
+                day_start = max(day_start, now + timedelta(minutes=5))
+
+            if current_day == final_study_day:
+                day_end = min(
+                    day_end,
+                    exam_datetime - timedelta(minutes=60)
+                )
+
+            available_minutes = max(
+                0, int((day_end - day_start).total_seconds() // 60)
+            )
+            target_minutes = min(
+                hours_per_day * 60, available_minutes
+            )
+
+            # 50-minute study sessions with 10-minute breaks.
+            session_count = target_minutes // 60
+            leftover_minutes = target_minutes % 60
+
+            day_topic_index = (
+                (current_day - date.today()).days * max(1, session_count)
+            ) % len(topics)
+
+            cursor = day_start
+            minutes_used = 0
+            session_number = 0
+
+            while (
+                minutes_used < target_minutes
+                and cursor < day_end
+            ):
+                study_minutes = min(
+                    50,
+                    target_minutes - minutes_used,
+                    int((day_end - cursor).total_seconds() // 60),
+                )
+
+                if study_minutes <= 0:
+                    break
+
+                topic = topics[
+                    (day_topic_index + session_number) % len(topics)
+                ]
+
+                session_end = cursor + timedelta(minutes=study_minutes)
+
+                schedule_rows.append({
+                    "Date": current_day.strftime("%d-%m-%Y"),
+                    "Time": (
+                        f"{cursor.strftime('%I:%M %p')} - "
+                        f"{session_end.strftime('%I:%M %p')}"
+                    ),
+                    "Session": f"Study: {topic}",
+                    "Duration": f"{study_minutes} min",
+                })
+
+                cursor = session_end
+                minutes_used += study_minutes
+                session_number += 1
+
+                if minutes_used < target_minutes and cursor < day_end:
+                    break_minutes = min(
+                        10,
+                        target_minutes - minutes_used,
+                        int((day_end - cursor).total_seconds() // 60),
+                    )
+
+                    if break_minutes > 0:
+                        break_end = cursor + timedelta(
+                            minutes=break_minutes
+                        )
+
+                        schedule_rows.append({
+                            "Date": current_day.strftime("%d-%m-%Y"),
+                            "Time": (
+                                f"{cursor.strftime('%I:%M %p')} - "
+                                f"{break_end.strftime('%I:%M %p')}"
+                            ),
+                            "Session": "☕ Short break",
+                            "Duration": f"{break_minutes} min",
+                        })
+
+                        cursor = break_end
+                        minutes_used += break_minutes
+
+            current_day += timedelta(days=1)
+
+        if schedule_rows:
+            countdown_df = pd.DataFrame(schedule_rows)
+            st.markdown("### 📚 Your revision sessions")
+            st.dataframe(
+                countdown_df,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            st.download_button(
+                "⬇️ Download revision timetable (CSV)",
+                data=countdown_df.to_csv(index=False).encode("utf-8"),
+                file_name="zappyboo_exam_countdown.csv",
+                mime="text/csv",
+                key="download_countdown",
+            )
+        else:
+            st.warning(
+                "Exam-ku munnadi schedule create panna time illa. "
+                "Available time check pannu bro."
+            )
+    else:
+        st.warning("Exam time vandhuduchu. New exam details enter pannu.")
 
 # ---------- Results ----------
 if submitted:
