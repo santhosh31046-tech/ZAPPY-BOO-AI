@@ -10,6 +10,139 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+# ---------- ZAPPYBOO PREMIUM HEADER ----------
+import streamlit as st
+
+st.markdown("""
+<style>
+.stApp {
+    background:
+        radial-gradient(ellipse at 50% 8%,
+            rgba(0, 145, 255, 0.20), transparent 42%),
+        radial-gradient(ellipse at 15% 35%,
+            rgba(112, 65, 220, 0.12), transparent 45%),
+        linear-gradient(145deg, #080c18, #101a30 55%, #080c18);
+    color: #f5f7ff;
+}
+
+/* Hide top toolbar */
+[data-testid="stToolbar"] {
+    visibility: hidden;
+}
+
+/* Center logo */
+.zappy-logo {
+    text-align: center;
+    padding: 12px 0 0;
+}
+
+/* Hero card */
+.zappy-hero {
+    max-width: 900px;
+    margin: 8px auto 28px;
+    padding: 28px 24px;
+    border: 1px solid rgba(155, 140, 255, 0.30);
+    border-radius: 24px;
+    background: linear-gradient(
+        120deg,
+        rgba(55, 43, 105, 0.42),
+        rgba(12, 42, 64, 0.48)
+    );
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.zappy-kicker {
+    color: #b9a7ff;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+}
+
+.zappy-title {
+    color: #f7f8ff;
+    font-size: clamp(34px, 6vw, 54px);
+    line-height: 1.12;
+    font-weight: 850;
+    letter-spacing: -1.5px;
+    margin: 0 0 18px;
+}
+
+.zappy-description {
+    color: #c1cbe0;
+    font-size: clamp(16px, 2.5vw, 20px);
+    line-height: 1.8;
+    margin: 0;
+}
+
+/* Form container */
+div[data-testid="stForm"] {
+    border: 1px solid rgba(145, 160, 200, 0.28);
+    border-radius: 18px;
+    padding: 22px;
+    background: rgba(10, 16, 32, 0.55);
+}
+
+/* Buttons */
+div.stButton > button,
+div.stFormSubmitButton > button {
+    background: linear-gradient(100deg, #6555f5, #168de0);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    min-height: 46px;
+    font-weight: 750;
+}
+
+div.stButton > button:hover,
+div.stFormSubmitButton > button:hover {
+    box-shadow: 0 0 22px rgba(70, 140, 255, 0.35);
+    border: none;
+}
+
+/* Mobile layout */
+@media (max-width: 600px) {
+    .zappy-hero {
+        padding: 22px 18px;
+        border-radius: 20px;
+    }
+
+    .zappy-kicker {
+        font-size: 10px;
+        letter-spacing: 2px;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Centered logo
+left, center, right = st.columns([1, 2, 1])
+
+with center:
+    st.markdown(
+        '<div class="zappy-logo"></div>',
+        unsafe_allow_html=True
+    )
+    st.image("zappyboo_logo(2).png", width=320)
+
+# Hero section
+st.markdown("""
+<div class="zappy-hero">
+    <div class="zappy-kicker">
+        YOUR PERSONAL LEARNING DASHBOARD
+    </div>
+
+    <h1 class="zappy-title">
+        Study smarter.<br>
+        Feel more prepared.
+    </h1>
+
+    <p class="zappy-description">
+        Choose a subject and get a general timetable by default,
+        or optionally enter topics for a day-by-day topic-wise plan.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 st.markdown(
     """
     <style>
@@ -265,19 +398,6 @@ with st.sidebar:
     st.markdown("---")
     st.caption("MINI PROJECT · PYTHON + MACHINE LEARNING")
     st.caption("Demo model — educational use only")
-
-# ---------- Hero ----------
-st.markdown(
-    """
-    <div class="hero">
-        <div class="eyebrow">Your personal learning dashboard</div>
-        <h1>Study smarter.<br>Feel more prepared.</h1>
-        <p>Choose a subject and get a general timetable by default, or optionally enter topics for a day-by-day topic-wise plan.</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 # ---------- Input panel ----------
 st.markdown('<div class="section-kicker">01 / Your preparation</div>', unsafe_allow_html=True)
 st.header("Let’s plan your next study session")
