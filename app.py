@@ -123,7 +123,7 @@ with center:
         '<div class="zappy-logo"></div>',
         unsafe_allow_html=True
     )
-    st.image("zappyboo_logo (2).png", width=320)
+    st.image("zappyboo_logo (2).png", width=220)
 
 # Hero section
 st.markdown(
