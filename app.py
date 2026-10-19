@@ -126,23 +126,18 @@ with center:
     st.image("zappyboo_logo (2).png", width=320)
 
 # Hero section
-st.markdown("""
-<div class="zappy-hero">
-    <div class="zappy-kicker">
-        YOUR PERSONAL LEARNING DASHBOARD
+st.markdown(
+    """
+    <div style="text-align:center; padding:24px;">
+        <h1>Study smarter.<br>Feel more prepared.</h1>
+        <p>
+            Choose a subject and get a general timetable by default,
+            or optionally enter topics for a day-by-day topic-wise plan.
+        </p>
     </div>
-
-    <h1 class="zappy-title">
-        Study smarter.<br>
-        Feel more prepared.
-    </h1>
-
-    <p class="zappy-description">
-        Choose a subject and get a general timetable by default,
-        or optionally enter topics for a day-by-day topic-wise plan.
-    </p>
-</div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 st.markdown(
     """
     <style>
